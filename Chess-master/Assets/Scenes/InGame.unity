@@ -3434,7 +3434,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 204.16504, y: -68.661804}
+  m_AnchoredPosition: {x: 204.16501, y: -68.661804}
   m_SizeDelta: {x: 136.11, y: 127.7}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1405398268
@@ -3740,7 +3740,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1509302275}
-  - component: {fileID: 1509302276}
   m_Layer: 0
   m_Name: IA
   m_TagString: Untagged
@@ -3762,33 +3761,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1509302276
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1509302274}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 22cdbfa81662f014a968125e17323ec6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debug: 0
-  playMoreGame: 100
-  numberTrainingGame: 10000
-  ia1:
-    isTraining: 0
-    epsilon: 0
-    nbGame: 0
-    nbVictory: 0
-    winrate: 0
-  ia2:
-    isTraining: 0
-    epsilon: 0
-    nbGame: 0
-    nbVictory: 0
-    winrate: 0
 --- !u!1 &1555444374
 GameObject:
   m_ObjectHideFlags: 0
@@ -3823,7 +3795,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 363, y: -116.20001}
+  m_AnchoredPosition: {x: 363.00003, y: -116.20001}
   m_SizeDelta: {x: 557.6, y: 142.8}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1555444376
@@ -4256,7 +4228,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 340.27502, y: -68.661804}
+  m_AnchoredPosition: {x: 340.275, y: -68.661804}
   m_SizeDelta: {x: 136.11, y: 127.7}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1900177742
@@ -5093,7 +5065,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 476.385, y: -68.661804}
+  m_AnchoredPosition: {x: 476.38498, y: -68.661804}
   m_SizeDelta: {x: 136.11, y: 127.7}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2138333939

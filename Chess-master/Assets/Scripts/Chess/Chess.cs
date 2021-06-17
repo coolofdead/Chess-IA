@@ -23,25 +23,25 @@ public class Chess : MonoBehaviour {
     public HighlightingManager highlightingManager;
     public PieceModelManager pieceModelManager;
 
-    private Field selectedField = null;
+    public Field selectedField = null;
     private Field promoteField = null;
     public bool isWhiteAtTurn = true;
     public static int Turn { private set; get; }
 
-    private Field[,] fields = new Field[8, 8];
+    public Field[,] fields = new Field[8, 8];
+    IA ia;
 
-    public override int GetHashCode()
+    public void Print()
     {
-        string chessField = "";
-
-        foreach (Field f in fields)
+        for (int x = 0; x <= fields.GetUpperBound(0); x++)
         {
-            chessField += f.Piece == null ? "" : f.Piece.ToString() + f.AlphaNumericPosition;
+            string z = "";
+            for (int y = 0; y <= fields.GetUpperBound(1); y++)
+            {
+                z += fields[y,x].Piece != null ? fields[y,x].Piece.Type.ToString() : "_";
+            }
+            Debug.Log(z);
         }
-
-        Debug.Log(chessField);
-
-        return chessField.GetHashCode();
     }
 
     private void Start()
@@ -57,11 +57,40 @@ public class Chess : MonoBehaviour {
         GetHashCode();
 
         SetUpField();
+        ia = new IA(this, true);
 
         player1Waiting.enabled = false;
         player1Playing.enabled = true;
         player2Waiting.enabled = true;
         player2Playing.enabled = false;
+
+        if (ia.playAsWhite)
+        {
+            IaMove();
+        }
+    }
+
+    private void IaMove()
+    {
+        var iaMove = ia.GetNextMove();
+
+        OnPieceChosen(fields[iaMove.piecePosition.x, iaMove.piecePosition.y]);
+        OnMarkerChosen(fields[iaMove.moveFromPiece.x, iaMove.moveFromPiece.y]);
+    }
+
+    public void RefreshChess()
+    {
+        foreach (Field field in fields)
+        {
+            if (field.Piece == null)
+            {
+                pieceModelManager.ShowNoPieceModel(field);
+            }
+            else
+            {
+                pieceModelManager.ShowPieceModel(field);
+            }
+        }
     }
 
     public Field GetField(Vector2Int position)
@@ -72,6 +101,37 @@ public class Chess : MonoBehaviour {
         }
 
         return null;
+    }
+
+    public List<Field> GetAllFieldWithMarker()
+    {
+        List<Field> fieldsWithMarker = new List<Field>();
+
+        foreach (Field field in fields)
+        {
+            if (field.Marker != null)
+            {
+                if (field.Marker.Type == MarkerType.CAPTURE || field.Marker.Type == MarkerType.MOVE)
+                    fieldsWithMarker.Add(field);
+            }
+        }
+
+        return fieldsWithMarker;
+    }
+
+    public List<Field> GetEveryPiecesForPlayer(bool isWhite)
+    {
+        List<Field> pieces = new List<Field>();
+
+        foreach (Field field in fields)
+        {
+            if (field.Piece != null && field.Piece.IsWhite == isWhite)
+            {
+                pieces.Add(field);
+            }
+        }
+
+        return pieces;
     }
 
     public Field GetKingField(bool isWhite)
@@ -110,14 +170,14 @@ public class Chess : MonoBehaviour {
         if (chosenField.Piece.IsWhite == isWhiteAtTurn)
         {
             this.selectedField = chosenField;
-            //Clear move and capture marks
+            // Clear move and capture marks
             ClearMarks(false);
             Piece piece = chosenField.Piece;
 
             foreach (Field to in fields)
             {
                 // Castle
-                if (CanCastle(chosenField, to))
+                if (CanCastle(chosenField, to) && !WouldBeCheck(isWhiteAtTurn))
                 {
                     to.Marker = new Marker(MarkerType.MOVE);
                     to.Marker.IsCastle = true;
@@ -132,20 +192,36 @@ public class Chess : MonoBehaviour {
                     enPassantField.Marker.EnPassantField = to;
                     highlightingManager.ShowOption(enPassantField);
                 }
+            }
 
-                foreach (Field moveField in GetMoveFieldsAdvanced(chosenField))
-                {
-                    moveField.Marker = new Marker(MarkerType.MOVE);
-                    highlightingManager.ShowOption(moveField);
-                }
+            foreach (Field moveField in GetMoveFieldsAdvanced(chosenField))
+            {
+                //Debug.Log(chosenField.Piece + " " + moveField.Position);
+                moveField.Marker = new Marker(MarkerType.MOVE);
+                highlightingManager.ShowOption(moveField);
+            }
 
-                foreach (Field captureField in GetCaptureFieldsAdvanced(chosenField, false))
-                {
-                    captureField.Marker = new Marker(MarkerType.CAPTURE);
-                    highlightingManager.ShowOption(captureField);
-                }
+            foreach (Field captureField in GetCaptureFieldsAdvanced(chosenField, false))
+            {
+                captureField.Marker = new Marker(MarkerType.CAPTURE);
+                highlightingManager.ShowOption(captureField);
             }
         }
+    }
+
+    public List<Field> GetAllFieldWithMarker(Field[,] fields)
+    {
+        List<Field> availableMoves = new List<Field>();
+
+        foreach (Field to in fields)
+        {
+            if (to.Marker != null)
+            {
+                availableMoves.Add(to);
+            }
+        }
+
+        return availableMoves;
     }
 
     private List<Field> GetMoveFieldsAdvanced(Field from)
@@ -190,7 +266,7 @@ public class Chess : MonoBehaviour {
         if (to != from)
         {
             Move move = from.GetMoveTo(to);
-
+            
             //If field to got is not occupied
             if (!to.IsOccupied())
             {
@@ -292,7 +368,7 @@ public class Chess : MonoBehaviour {
         return false;
     }
 
-    private bool CanMakeAnyLegalMove(bool isWhite)
+    public bool CanMakeAnyLegalMove(bool isWhite)
     {
         foreach (Field field in fields)
         {
@@ -349,14 +425,14 @@ public class Chess : MonoBehaviour {
                 }
             }
         }
-
         return false;
     }
 
     //EVENT
-    public void OnMarkerChosen(Field field)
+    public void OnMarkerChosen(Field field, Field selectedField = null)
     {
-        var previousGameState = GetHashCode();
+        bool isIaFindingMove = selectedField != null;
+        selectedField = selectedField == null ? this.selectedField : selectedField;
 
         if (field.Marker != null)
         {
@@ -383,7 +459,14 @@ public class Chess : MonoBehaviour {
 
                     selectedField.Piece.MadeFirstMove = true;
                     selectedField.Piece.Move(fieldToMove.Position);
-                    SendPieceToGraveyard(fieldToMove);
+                    if(isIaFindingMove)
+                    {
+                        fieldToMove.Piece = null;
+                    }
+                    else
+                    {
+                        SendPieceToGraveyard(fieldToMove);
+                    }
                     MovePiece(selectedField, field);
                     break;
 
@@ -396,20 +479,31 @@ public class Chess : MonoBehaviour {
             //Check if pawn can promote
             if (field.Piece.CanPromote())
             {
-                promoteField = field;
-                promotionTiles.SetActive(true);
-                promotionPanel.SetActive(true);
+                if (isIaFindingMove)
+                {
+                    field.Piece = new Queen(field.Position, isWhiteAtTurn);
+                }
+                else
+                {
+                    if (isWhiteAtTurn == ia.playAsWhite)
+                    {
+                        field.Piece = new Queen(field.Position, isWhiteAtTurn);
+                        RefreshChess();
+                    }
+                    else
+                    {
+                        Debug.Log(isWhiteAtTurn ? "white" : "black");
+                        promoteField = field;
+                        promotionTiles.SetActive(true);
+                        promotionPanel.SetActive(true);
+                    }
+                }
             }
         }
-
-        // Nécessaire ?
-        //var gameState = new GameState
-        //{
-        //    state = previousGameState,
-        //    nextState = GetHashCode(), // Set as 0, it'll be set once the next player play a move or stay as 0 if the game is over
-        //    action = field.Piece.Type.ToString() + field.AlphaNumericPosition,
-        //    reward = !CanMakeAnyLegalMove(!isWhiteAtTurn) ? 0 : -1
-        //};
+        else
+        {
+            Debug.Log($"On marker choosen empty at {field.Position.ToString()}");
+        }
 
         //Check if enemy king field is check
         Field kingField = GetKingField(!isWhiteAtTurn);
@@ -418,20 +512,20 @@ public class Chess : MonoBehaviour {
             kingField.Marker = new Marker(MarkerType.CHECK);
             highlightingManager.ShowOption(kingField);
 
-            if (!CanMakeAnyLegalMove(!isWhiteAtTurn))
+            if (!CanMakeAnyLegalMove(!isWhiteAtTurn) && !isIaFindingMove)
             {
                 ShowEndScreen(false, isWhiteAtTurn);
             }
         }
         else
         {
-            if (!CanMakeAnyLegalMove(!isWhiteAtTurn))
+            if (!CanMakeAnyLegalMove(!isWhiteAtTurn) && !isIaFindingMove)
             {
                 ShowEndScreen(true, false);
             }
         }
 
-        if (field.Marker == null)
+        if (field.Marker == null && !isIaFindingMove)
         {
             player1Waiting.enabled = !player1Waiting.enabled;
             player1Playing.enabled = !player1Playing.enabled;
@@ -439,6 +533,9 @@ public class Chess : MonoBehaviour {
             player2Playing.enabled = !player2Playing.enabled;
 
             isWhiteAtTurn = !isWhiteAtTurn;
+
+            if (isWhiteAtTurn == ia.playAsWhite && !promotionTiles.activeSelf)
+                IaMove();
         }
     }
 
@@ -554,7 +651,6 @@ public class Chess : MonoBehaviour {
             }
 
         }
-
         else
         {
             for (int x = 0; x < 3; x++)
@@ -667,5 +763,10 @@ public class Chess : MonoBehaviour {
 
         selectedField = promoteField;
         OnMarkerChosen(promoteField);
+
+        isWhiteAtTurn = !isWhiteAtTurn;
+
+        if (isWhiteAtTurn == ia.playAsWhite)
+            IaMove();
     }
 }

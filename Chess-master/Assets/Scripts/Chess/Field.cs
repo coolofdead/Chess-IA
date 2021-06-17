@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Field {
 
-    public Vector2Int Position { get; }
+    public Vector2Int Position { get; private set; }
     public Piece Piece { get; set; }
     public Marker Marker { get; set; }
 
@@ -23,6 +23,16 @@ public class Field {
     {
         this.Position = new Vector2Int(x, y);
         this.Piece = null;
+    }
+
+    public Field Clone()
+    {
+        Field clone = new Field(Position.x, Position.y);
+
+        clone.Piece = Piece?.Clone();
+        clone.Marker = Marker?.Clone();
+
+        return clone;
     }
 
     public bool IsOccupied()

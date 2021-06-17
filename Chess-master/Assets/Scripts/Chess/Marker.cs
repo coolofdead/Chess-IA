@@ -24,6 +24,17 @@ public class Marker {
 
         this.Type = type;
     }
+
+    public Marker Clone()
+    {
+        Marker clone = new Marker(Type);
+
+        clone.IsCastle = IsCastle;
+        clone.IsEnPassant = IsEnPassant;
+        clone.EnPassantField = EnPassantField;
+
+        return clone;
+    }
 }
 
 public enum MarkerType

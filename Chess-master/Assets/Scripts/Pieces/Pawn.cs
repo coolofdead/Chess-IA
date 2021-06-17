@@ -12,6 +12,15 @@ public class Pawn : Piece
     {
     }
 
+    public Pawn(Vector2Int position, bool isWhite, PieceType type, bool MadeFirstMove = false) : base(position, isWhite, type, MadeFirstMove)
+    {
+    }
+
+    public override Piece Clone()
+    {
+        return new Pawn(position, this.IsWhite, this.Type, this.MadeFirstMove);
+    }
+
     public override bool CanMakeMove(Move move)
     {
         if (move.IsMoveForward(IsWhite) && move.IsMoveVertical())
