@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 
 public class IA
 {
     private const int MAX_DEPTH = 2;
+    private int b = 0;
 
     private MovePredicted bestMove;
     private int bestScore;
@@ -32,6 +32,8 @@ public class IA
         if (score < bestScore)
             return score;
 
+        b++;
+
         chess.fields = board;
 
         //Debug.Log("Turn " + (whiteTurn ? "White" : "Black"));
@@ -39,6 +41,8 @@ public class IA
         // Get all IA pieces
         var pieces = chess.GetEveryPiecesForPlayer(whiteTurn);
 
+        var t = whiteTurn ? "white" : "black";
+        
         // Choose piece on field
         foreach (Field piece in pieces)
         {
@@ -69,14 +73,6 @@ public class IA
                 {
                     // Translate move to score
                     score += (int)pieceMove.Piece.Type * (whiteTurn == playAsWhite ? 1 : -1);
-
-                    var t = whiteTurn ? "white" : "black";
-                    //Debug.Log($"{piece.Piece} at {piece.Position} eat a {pieceMove.Piece} at {pieceMove.Position} for a score of {score} during turn {t}");
-                }
-
-                if (pieceMove.Marker.Type == MarkerType.CAPTURE && whiteTurn == playAsWhite)
-                {
-                    //Debug.Log($"IA {piece.Piece} at {piece.Position} eat a {pieceMove.Piece} at {pieceMove.Position} for a score of {score}");
                 }
 
                 var boardClone = CloneBoard(board);
@@ -91,12 +87,18 @@ public class IA
                 // Recu with opponent pieces
                 int newScore = FindNextMove(boardClone, !whiteTurn, currentDepth + 1, score);
 
+                if (pieceMove.Marker.Type == MarkerType.CAPTURE)
+                {
+                    // Revert score after testing it
+                    score -= (int)pieceMove.Piece.Type * (whiteTurn == playAsWhite ? 1 : -1);
+                }
+
                 //Debug.Log($"Turn {currentDepth} for {(whiteTurn ? "White" : "Black")} score: {newScore}");
 
                 // Set best move
                 if (newScore > bestScore && playAsWhite == whiteTurn)
                 {
-                    //Debug.Log("New Best move " + bestMove.moveFromPiece + " with score: " + score);
+                    Debug.Log("New Best move " + pieceMove.Position + " with new score: " + newScore + " and score " + score);
                     bestMove.piecePosition = new Vector2Int(piece.Position.x, piece.Position.y);
                     bestMove.moveFromPiece = new Vector2Int(pieceMove.Position.x, pieceMove.Position.y);
                     this.bestScore = newScore;
@@ -124,6 +126,7 @@ public class IA
 
     public MovePredicted GetNextMove()
     {
+        b = 0;
         bestScore = -9999;
         bestMove = new MovePredicted() { piecePosition = new Vector2Int(-1, -1) };
 
@@ -134,11 +137,13 @@ public class IA
 
         FindNextMove(cloneBoard, playAsWhite);
 
+        Debug.Log("Il y a " + b + " branches éxplorés");
+
         chess.fields = baseBoard;
         chess.isWhiteAtTurn = playAsWhite;
 
-        //Debug.Log(bestMove.piecePosition);
-        //Debug.Log(bestMove.moveFromPiece);
+        Debug.Log(bestMove.piecePosition);
+        Debug.Log(bestMove.moveFromPiece);
 
         chess.RefreshChess();
 
