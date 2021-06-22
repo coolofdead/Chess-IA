@@ -9,19 +9,6 @@ public class User : MonoBehaviour
     public string imgUrl;
 
 
-
-    // Start is called before the first frame update
-    void Start()
-    {
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
-
     // Creation de base
     public User(string uid, string nameUser, string imgUrl)
     {
