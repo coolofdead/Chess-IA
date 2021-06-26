@@ -29,7 +29,7 @@ public class Matchmaking : MonoBehaviour
 
         searchButton.onClick.AddListener( MatchmakingAsync);
         
-        leaveButton.onClick.AddListener(() => SceneManager.LoadScene("MainScene"));
+        leaveButton.onClick.AddListener(() => SceneManager.LoadScene("MenuScene"));
     }
 
     // Update is called once per frame

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Firebase.Auth;
 using Firebase.Extensions;
+using Firebase.Firestore;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,13 +12,21 @@ using UnityEngine.UI;
 public class SignUpHandler : MonoBehaviour
 {
     public InputField emailTextBox;
+    public InputField pseudoTextBox;
     public InputField passwordTextBox;
     public InputField confirmPasswordTextBox;
     public Button backButton;
     public Button signupButton;
     public Text errorText;
+
+    public static string pseudo;
+
     protected Firebase.Auth.FirebaseAuth auth;
     protected string displayName = "";
+
+
+    FirebaseFirestore db = FirebaseFirestore.DefaultInstance;
+    User user;
 
     // Start is called before the first frame update
     void Start()
@@ -45,6 +55,7 @@ public class SignUpHandler : MonoBehaviour
     {
         string email = emailTextBox.text;
         string password = passwordTextBox.text;
+        pseudo = pseudoTextBox.text;
 
         Debug.Log(String.Format("Attempting to create user {0}...", email));
         DisableUI();
@@ -59,6 +70,7 @@ public class SignUpHandler : MonoBehaviour
               return task;
           }).Unwrap();
     }
+
 
     // Log the result of the specified task, returning true if the task
     // completed successfully, false otherwise.

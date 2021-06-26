@@ -50,7 +50,7 @@ public class AuthManager : ScriptableObject
                 Debug.Log("Signed in " + user.DisplayName);
                 DisplayDetailedUserInfo(user, 1);
                 // on reste/va dans le menu principal
-                SceneManager.LoadScene("MainScene");
+                SceneManager.LoadScene("MenuScene");
             }
         }
         else

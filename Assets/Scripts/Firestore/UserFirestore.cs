@@ -22,7 +22,7 @@ public class UserFirestore : MonoBehaviour
         auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
 
         AddUser();
-        ShowUser();
+        // ShowUser();
     }
 
     // Update is called once per frame
@@ -33,39 +33,66 @@ public class UserFirestore : MonoBehaviour
 
 
 
-    void AddUser()
+    //void AddUser()
+    //{
+    //    DocumentReference docRef = db.Collection("users").Document(auth.CurrentUser.UserId);
+    //    user = new User(auth.CurrentUser.UserId, "Toto", "l'imagedeToto");
+    //    Dictionary<string, object> userData= user.getDictionnary();
+
+    //    Debug.Log("looser" + user + userData);
+    //    docRef.SetAsync(userData).ContinueWithOnMainThread(task => {
+    //        Debug.Log("Added data in the users collection.");
+    //    });
+    //}
+
+
+    public void AddUser()
     {
+
         DocumentReference docRef = db.Collection("users").Document(auth.CurrentUser.UserId);
-        user = new User(auth.CurrentUser.UserId, "Toto", "l'imagedeToto");
-        Dictionary<string, object> userData= user.getDictionnary();
-
-        Debug.Log("looser" + user + userData);
-        docRef.SetAsync(userData).ContinueWithOnMainThread(task => {
-            Debug.Log("Added data in the users collection.");
-        });
-    }
-
-    void ShowUser()
-    {
-        CollectionReference usersRef = db.Collection("users");
-        usersRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        docRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            QuerySnapshot snapshot = task.Result;
-            foreach (DocumentSnapshot document in snapshot.Documents)
+            DocumentSnapshot snapshot = task.Result;
+            if (snapshot.Exists)
             {
-                Debug.Log(string.Format("User: {0}", document.Id));
-                Dictionary<string, object> documentDictionary = document.ToDictionary();
-                Debug.Log(string.Format("Name: {0}", documentDictionary["Name"]));
-                if (documentDictionary.ContainsKey("Middle"))
-                {
-                    Debug.Log(string.Format("Middle: {0}", documentDictionary["Middle"]));
-                }
-
-                Debug.Log(string.Format("Image: {0}", documentDictionary["ImgUrl"]));
+                // rien
             }
+            else
+            {
+                // si l'utilisateur n'est pas déjà crée
+                DocumentReference docAddRef = db.Collection("users").Document(auth.CurrentUser.UserId);
+                user = new User(auth.CurrentUser.UserId, SignUpHandler.pseudo, "", 800);
+                Dictionary<string, object> userData = user.getDictionnary();
 
-            Debug.Log("Read all data from the users collection.");
+                docAddRef.SetAsync(userData).ContinueWithOnMainThread(taskadd => {
+                    Debug.Log("Added data in the users collection.");
+                });
+            }
         });
+
     }
+
+    //void ShowUser()
+    //{
+    //    CollectionReference usersRef = db.Collection("users");
+    //    usersRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+    //    {
+    //        QuerySnapshot snapshot = task.Result;
+    //        foreach (DocumentSnapshot document in snapshot.Documents)
+    //        {
+    //            Debug.Log(string.Format("User: {0}", document.Id));
+    //            Dictionary<string, object> documentDictionary = document.ToDictionary();
+    //            Debug.Log(string.Format("Name: {0}", documentDictionary["Name"]));
+    //            if (documentDictionary.ContainsKey("Middle"))
+    //            {
+    //                Debug.Log(string.Format("Middle: {0}", documentDictionary["Middle"]));
+    //            }
+
+    //            Debug.Log(string.Format("Image: {0}", documentDictionary["ImgUrl"]));
+    //        }
+
+    //        Debug.Log("Read all data from the users collection.");
+    //    });
+    //}
 
 }
