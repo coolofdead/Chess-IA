@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class IA
 {
@@ -18,12 +19,30 @@ public class IA
         public Vector2Int moveFromPiece;
     }
 
+    public struct UglyMove
+    {
+        public PieceType piece;
+        public bool whitePiece;
+        public bool madeFirstMove;
+        public Vector2Int fromPosition;
+        public Vector2Int toPosition;
+        public MarkerType moveType;
+        public PieceType capturedPiece;
+        public bool whiteCapturedPiece;
+        public bool madeFirstMoveCapturedPiece;
+    }
+
     public IA(Chess chess, bool playAsWhite)
     {
         this.chess = chess;
         this.playAsWhite = playAsWhite;
     }
 
+    System.Diagnostics.Stopwatch everyPiecesWatch = new System.Diagnostics.Stopwatch();
+    System.Diagnostics.Stopwatch allFieldMarkerWatch = new System.Diagnostics.Stopwatch();
+    System.Diagnostics.Stopwatch pieceChoosenWatch = new System.Diagnostics.Stopwatch();
+    System.Diagnostics.Stopwatch markerChoosenWatch = new System.Diagnostics.Stopwatch();
+    
     private int FindNextMove(Field[,] board, bool whiteTurn, int currentDepth = 0, int score = 0)
     {
         if (currentDepth >= MAX_DEPTH)
@@ -34,25 +53,26 @@ public class IA
 
         b++;
 
-        chess.fields = board;
-
-        //Debug.Log("Turn " + (whiteTurn ? "White" : "Black"));
-
+        everyPiecesWatch.Start();
         // Get all IA pieces
         var pieces = chess.GetEveryPiecesForPlayer(whiteTurn);
+        everyPiecesWatch.Stop();
 
-        var t = whiteTurn ? "white" : "black";
-        
+        var min = 0;
+
         // Choose piece on field
         foreach (Field piece in pieces)
         {
-            chess.fields = board;
             chess.isWhiteAtTurn = whiteTurn;
 
+            pieceChoosenWatch.Start();
             // Check every moves available for that piece
-            chess.OnPieceChosen(piece);
+            chess.OnPieceChosen(piece, true);
+            pieceChoosenWatch.Stop();
 
+            allFieldMarkerWatch.Start();
             var moves = chess.GetAllFieldWithMarker();
+            allFieldMarkerWatch.Stop();
 
             // Check mate for one player
             if (!chess.CanMakeAnyLegalMove(whiteTurn))
@@ -60,8 +80,17 @@ public class IA
                 return 999 * (whiteTurn == playAsWhite ? 1 : -1);
             }
 
+            //Debug.Log($"{t} {piece.Piece.ToString()} at {piece.Position} a {moves.Count} moves");
+
             foreach (Field pieceMove in moves)
             {
+                chess.isWhiteAtTurn = whiteTurn;
+
+                pieceChoosenWatch.Start();
+                chess.OnPieceChosen(piece, true);
+                pieceChoosenWatch.Stop();
+                //Debug.Log(c + " " + piece.Piece.ToString() + " to " + pieceMove.Position);
+
                 if (bestMove.piecePosition.x == -1 && bestMove.piecePosition.y == -1 && whiteTurn == playAsWhite)
                 {
                     //Debug.Log($"DEFAULT MOVE: {piece.Piece.ToString()} at {piece.Piece.Position} et move {pieceMove.Position}");
@@ -71,34 +100,58 @@ public class IA
 
                 if (pieceMove.Marker.Type == MarkerType.CAPTURE)
                 {
-                    // Translate move to score
-                    score += (int)pieceMove.Piece.Type * (whiteTurn == playAsWhite ? 1 : -1);
+                    if (pieceMove.Piece == null)
+                    {
+                        //Debug.Log($"{piece.Piece.IsWhite} {piece.Piece.ToString()} {piece.Position} essaye de manger à {pieceMove.Position}");
+                        continue;
+                    }
+                    //Debug.Log($"{t} can capture {pieceMove.Piece} at {pieceMove.Position} with {piece.Piece} at {piece.Position}");
                 }
 
-                var boardClone = CloneBoard(board);
-                chess.fields = boardClone;
+                UglyMove uglyMove = new UglyMove()
+                {
+                    piece = piece.Piece.Type,
+                    whitePiece = piece.Piece.IsWhite,
+                    madeFirstMove = piece.Piece.MadeFirstMove,
+                    fromPosition = new Vector2Int(piece.Position.x, piece.Position.y),
+                    toPosition = new Vector2Int(pieceMove.Position.x, pieceMove.Position.y),
+                    moveType = pieceMove.Marker.Type,
+                    capturedPiece = pieceMove.Marker.Type == MarkerType.CAPTURE ? pieceMove.Piece.Type : PieceType.None,
+                    whiteCapturedPiece = pieceMove.Marker.Type == MarkerType.CAPTURE ? pieceMove.Piece.IsWhite : false,
+                    madeFirstMoveCapturedPiece = pieceMove.Marker.Type == MarkerType.CAPTURE ? pieceMove.Piece.MadeFirstMove : false,
+                };
 
-                Field pieceMoveClone = boardClone[pieceMove.Position.x, pieceMove.Position.y];
-                Field pieceClone = boardClone[piece.Position.x, piece.Position.y];
-
+                markerChoosenWatch.Start();
                 // Play that move
-                chess.OnMarkerChosen(pieceMoveClone, pieceClone);
+                chess.OnMarkerChosen(pieceMove, piece);
+                markerChoosenWatch.Stop();
 
                 // Recu with opponent pieces
-                int newScore = FindNextMove(boardClone, !whiteTurn, currentDepth + 1, score);
+                var caputedPieceValue = uglyMove.capturedPiece == PieceType.None ? 0 : (int)uglyMove.capturedPiece * (whiteTurn == playAsWhite ? 1 : -1);
 
-                if (pieceMove.Marker.Type == MarkerType.CAPTURE)
+                int newScore = FindNextMove(board, !whiteTurn, currentDepth + 1, score + caputedPieceValue);
+
+                min = newScore < min ? newScore : min;
+
+                if (uglyMove.moveType == MarkerType.MOVE)
                 {
-                    // Revert score after testing it
-                    score -= (int)pieceMove.Piece.Type * (whiteTurn == playAsWhite ? 1 : -1);
+                    Piece.Release(board[uglyMove.toPosition.x, uglyMove.toPosition.y].Piece);
+
+                    board[uglyMove.toPosition.x, uglyMove.toPosition.y].Piece = null;
+                    piece.Piece = Piece.Create(uglyMove.fromPosition, uglyMove.whitePiece, uglyMove.piece, uglyMove.madeFirstMove);
+                }
+                if (uglyMove.moveType == MarkerType.CAPTURE)
+                {
+                    Piece.Release(chess.fields[pieceMove.Position.x, pieceMove.Position.y].Piece, true);
+
+                    piece.Piece = Piece.Create(uglyMove.fromPosition, uglyMove.whitePiece, uglyMove.piece, uglyMove.madeFirstMove);
+                    board[uglyMove.toPosition.x, uglyMove.toPosition.y].Piece = Piece.Create(uglyMove.toPosition, uglyMove.whiteCapturedPiece, uglyMove.capturedPiece, uglyMove.madeFirstMoveCapturedPiece);
                 }
 
-                //Debug.Log($"Turn {currentDepth} for {(whiteTurn ? "White" : "Black")} score: {newScore}");
-
                 // Set best move
-                if (newScore > bestScore && playAsWhite == whiteTurn)
+                if (newScore > bestScore && playAsWhite == whiteTurn && currentDepth == 0)
                 {
-                    Debug.Log("New Best move " + pieceMove.Position + " with new score: " + newScore + " and score " + score);
+                    //Debug.Log("New Best move " + t + " " + piece.Piece.ToString() + " at " + piece.Position + " move to " + pieceMove.Position + " with new score: " + newScore + " and score " + score + " at depth " + currentDepth);
                     bestMove.piecePosition = new Vector2Int(piece.Position.x, piece.Position.y);
                     bestMove.moveFromPiece = new Vector2Int(pieceMove.Position.x, pieceMove.Position.y);
                     this.bestScore = newScore;
@@ -106,22 +159,7 @@ public class IA
             }
         }
 
-        return score;
-    }
-
-    private Field[,] CloneBoard(Field[,] board)
-    {
-        Field[,] cloneBoard = new Field[8, 8];
-
-        for (int x = 0; x < 8; x++)
-        {
-            for (int y = 0; y < 8; y++)
-            {
-                cloneBoard[x,y] = board[x,y].Clone();
-            }
-        }
-
-        return cloneBoard;
+        return min;
     }
 
     public MovePredicted GetNextMove()
@@ -130,20 +168,34 @@ public class IA
         bestScore = -9999;
         bestMove = new MovePredicted() { piecePosition = new Vector2Int(-1, -1) };
 
-        var baseBoard = chess.fields;
+        var turn = Chess.Turn;
 
-        // Clone current board
-        Field[,] cloneBoard = CloneBoard(baseBoard);
+        System.Diagnostics.Stopwatch stopWatch = new System.Diagnostics.Stopwatch();
 
-        FindNextMove(cloneBoard, playAsWhite);
+        stopWatch.Start();
+
+        FindNextMove(chess.fields, playAsWhite);
+
+        stopWatch.Stop();
+
+        Debug.Log($"{stopWatch.Elapsed.TotalSeconds} secs");
+        Debug.Log(everyPiecesWatch.Elapsed.TotalSeconds);
+        Debug.Log(allFieldMarkerWatch.Elapsed.TotalSeconds);
+        Debug.Log(pieceChoosenWatch.Elapsed.TotalSeconds);
+        Debug.Log(markerChoosenWatch.Elapsed.TotalSeconds);
+
+        Debug.Log("----------------");
+
+        Debug.Log(Chess.generalyValidWatch.Elapsed.TotalSeconds);
+        Debug.Log(Chess.wouldBeCheckWatch.Elapsed.TotalSeconds);
+
+        Chess.Turn = turn;
+        chess.isWhiteAtTurn = playAsWhite;
 
         Debug.Log("Il y a " + b + " branches éxplorés");
 
-        chess.fields = baseBoard;
-        chess.isWhiteAtTurn = playAsWhite;
-
-        Debug.Log(bestMove.piecePosition);
-        Debug.Log(bestMove.moveFromPiece);
+        //Debug.Log(bestMove.piecePosition);
+        //Debug.Log(bestMove.moveFromPiece);
 
         chess.RefreshChess();
 

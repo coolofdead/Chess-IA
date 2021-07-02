@@ -12,6 +12,12 @@ public class Move {
         return new Vector2Int(X, Y);
     }
 
+    public Move()
+    {
+        X = 0;
+        Y = 0;
+    }
+
     public Move(int x, int y)
     {
         this.X = x;
@@ -19,6 +25,12 @@ public class Move {
     }
 
     public Move(Vector2Int vector2Int)
+    {
+        this.X = vector2Int.x;
+        this.Y = vector2Int.y;
+    }
+
+    public void Set(Vector2Int vector2Int)
     {
         this.X = vector2Int.x;
         this.Y = vector2Int.y;

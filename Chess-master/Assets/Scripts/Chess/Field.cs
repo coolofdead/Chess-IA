@@ -10,6 +10,57 @@ public class Field {
 
     public bool edited = false;
 
+    private static List<Move> movesPool = new List<Move> {
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+        new Move(),
+    };
+    private static int indexMovePool = 0;
+    private static Move currentMoveFromPool
+    {
+        get
+        {
+            indexMovePool = indexMovePool + 1 >= movesPool.Count ? 0 : indexMovePool + 1;
+            return movesPool[indexMovePool];
+        }
+    }
+
     public string AlphaNumericPosition
     {
         get {
@@ -25,16 +76,6 @@ public class Field {
         this.Piece = null;
     }
 
-    public Field Clone()
-    {
-        Field clone = new Field(Position.x, Position.y);
-
-        clone.Piece = Piece?.Clone();
-        clone.Marker = Marker?.Clone();
-
-        return clone;
-    }
-
     public bool IsOccupied()
     {
         return Piece != null;
@@ -42,7 +83,9 @@ public class Field {
 
     public Move GetMoveTo(Field field)
     {
-        return new Move(field.Position - this.Position);
+        var move = currentMoveFromPool;
+        move.Set(field.Position - this.Position);
+        return move;
     }
 
     public Vector3Int Get3DPosition()

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -26,10 +27,79 @@ public class Chess : MonoBehaviour {
     public Field selectedField = null;
     private Field promoteField = null;
     public bool isWhiteAtTurn = true;
-    public static int Turn { private set; get; }
+    public static int Turn { set; get; }
 
     public Field[,] fields = new Field[8, 8];
     IA ia;
+
+    private static List<Marker> markersPool = new List<Marker> {
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+        new Marker(MarkerType.MOVE),
+    };
+    private static int indexMarkerPool = -1;
+    private static Marker currentMarkerFromPool {
+        get {
+            indexMarkerPool = indexMarkerPool + 1 >= markersPool.Count ? 0 : indexMarkerPool + 1;
+            markersPool[indexMarkerPool].Reset();
+            return markersPool[indexMarkerPool];
+        }
+    }
 
     public void Print()
     {
@@ -64,10 +134,18 @@ public class Chess : MonoBehaviour {
         player2Waiting.enabled = true;
         player2Playing.enabled = false;
 
+
+        var baseMemory = GC.GetTotalMemory(false);
+        //Debug.Log($"Memory used before collection: {GC.GetTotalMemory(false)}");
+
         if (ia.playAsWhite)
         {
             IaMove();
         }
+
+        //Debug.Log($"Memory used before collection: {baseMemory} - {GC.GetTotalMemory(false)}");
+
+        //GC.Collect();
     }
 
     private void IaMove()
@@ -76,6 +154,8 @@ public class Chess : MonoBehaviour {
 
         OnPieceChosen(fields[iaMove.piecePosition.x, iaMove.piecePosition.y]);
         OnMarkerChosen(fields[iaMove.moveFromPiece.x, iaMove.moveFromPiece.y]);
+
+        RefreshChess();
     }
 
     public void RefreshChess()
@@ -162,7 +242,7 @@ public class Chess : MonoBehaviour {
     }
 
     //EVENT
-    public void OnPieceChosen(Field chosenField)
+    public void OnPieceChosen(Field chosenField, bool isIaFindingMove = false)
     {
         if (chosenField.Piece == null)
             return;
@@ -171,7 +251,8 @@ public class Chess : MonoBehaviour {
         {
             this.selectedField = chosenField;
             // Clear move and capture marks
-            ClearMarks(false);
+            if(isIaFindingMove)
+                ClearMarks(false);
             Piece piece = chosenField.Piece;
 
             foreach (Field to in fields)
@@ -179,32 +260,39 @@ public class Chess : MonoBehaviour {
                 // Castle
                 if (CanCastle(chosenField, to) && !WouldBeCheck(isWhiteAtTurn))
                 {
-                    to.Marker = new Marker(MarkerType.MOVE);
+                    to.Marker = currentMarkerFromPool;
+                    to.Marker.Type = MarkerType.MOVE;
                     to.Marker.IsCastle = true;
-                    highlightingManager.ShowOption(to);
+                    if (isIaFindingMove == false)
+                        highlightingManager.ShowOption(to);
                 }
 
                 if (CanEnPassant(chosenField, to))
                 {
                     var enPassantField = fields[to.Position.x, to.Position.y + (isWhiteAtTurn ? 1 : -1)];
-                    enPassantField.Marker = new Marker(MarkerType.CAPTURE);
+                    enPassantField.Marker = currentMarkerFromPool;
+                    enPassantField.Marker.Type = MarkerType.CAPTURE;
                     enPassantField.Marker.IsEnPassant = true;
                     enPassantField.Marker.EnPassantField = to;
-                    highlightingManager.ShowOption(enPassantField);
+                    if (isIaFindingMove == false)
+                        highlightingManager.ShowOption(enPassantField);
                 }
             }
 
             foreach (Field moveField in GetMoveFieldsAdvanced(chosenField))
             {
-                //Debug.Log(chosenField.Piece + " " + moveField.Position);
-                moveField.Marker = new Marker(MarkerType.MOVE);
-                highlightingManager.ShowOption(moveField);
+                moveField.Marker = currentMarkerFromPool;
+                moveField.Marker.Type = MarkerType.MOVE;
+                if (isIaFindingMove == false)
+                    highlightingManager.ShowOption(moveField);
             }
 
             foreach (Field captureField in GetCaptureFieldsAdvanced(chosenField, false))
             {
-                captureField.Marker = new Marker(MarkerType.CAPTURE);
-                highlightingManager.ShowOption(captureField);
+                captureField.Marker = currentMarkerFromPool;
+                captureField.Marker.Type = MarkerType.CAPTURE;
+                if (isIaFindingMove == false)
+                    highlightingManager.ShowOption(captureField);
             }
         }
     }
@@ -224,16 +312,28 @@ public class Chess : MonoBehaviour {
         return availableMoves;
     }
 
+    public static System.Diagnostics.Stopwatch generalyValidWatch = new System.Diagnostics.Stopwatch();
+    public static System.Diagnostics.Stopwatch wouldBeCheckWatch = new System.Diagnostics.Stopwatch();
+
     private List<Field> GetMoveFieldsAdvanced(Field from)
     {
         List<Field> potentialFields = new List<Field>();
 
         foreach (Field to in fields)
         {
+            generalyValidWatch.Start();
+            IsMoveGenerallyValid(from, to);
+            generalyValidWatch.Stop();
+
             if (IsMoveGenerallyValid(from, to))
             {
                 to.Piece = from.Piece;
                 from.Piece = null;
+
+                wouldBeCheckWatch.Start();
+                WouldBeCheck(to.Piece.IsWhite);
+                wouldBeCheckWatch.Stop();
+
                 if (!WouldBeCheck(to.Piece.IsWhite))
                 {
                     potentialFields.Add(to);
@@ -323,6 +423,7 @@ public class Chess : MonoBehaviour {
         return potentialFields;
     }
 
+    // TODO : Opti
     public bool IsCaptureGenerallyValid(Field from, Field to)
     {
         //Check if field is not current field
@@ -359,9 +460,7 @@ public class Chess : MonoBehaviour {
             if (from.IsOccupied())
             {
                 if (GetCaptureFields(from).Contains(GetKingField(isWhite)))
-                {
                     return true;
-                }
             }
         }
 
@@ -446,34 +545,36 @@ public class Chess : MonoBehaviour {
                     if (field.Marker.IsCastle)
                     {
                         Castle(GetKing(isWhiteAtTurn), field);
-                        Turn++;
                     }
                     else
                     {
-                        MovePiece(selectedField, field);
+                        MovePiece(selectedField, field, isIaFindingMove);
                     }
+                    Turn++;
                     break;
 
                 case MarkerType.CAPTURE:
                     var fieldToMove = field.Marker.IsEnPassant ? field.Marker.EnPassantField : field;
-
                     selectedField.Piece.MadeFirstMove = true;
                     selectedField.Piece.Move(fieldToMove.Position);
                     if(isIaFindingMove)
                     {
+                        Piece.Release(fieldToMove.Piece);
                         fieldToMove.Piece = null;
                     }
                     else
                     {
+                        Piece.Release(fieldToMove.Piece);
                         SendPieceToGraveyard(fieldToMove);
                     }
-                    MovePiece(selectedField, field);
+                    MovePiece(selectedField, field, isIaFindingMove);
+                    Turn++;
                     break;
 
                 default:
                     return;
             }
-
+            
             ClearMarks(true);
 
             //Check if pawn can promote
@@ -481,18 +582,17 @@ public class Chess : MonoBehaviour {
             {
                 if (isIaFindingMove)
                 {
-                    field.Piece = new Queen(field.Position, isWhiteAtTurn);
+                    field.Piece = Piece.Create(field.Position, isWhiteAtTurn, PieceType.Q);
                 }
                 else
                 {
                     if (isWhiteAtTurn == ia.playAsWhite)
                     {
-                        field.Piece = new Queen(field.Position, isWhiteAtTurn);
+                        field.Piece = Piece.Create(field.Position, isWhiteAtTurn, PieceType.Q);
                         RefreshChess();
                     }
                     else
                     {
-                        Debug.Log(isWhiteAtTurn ? "white" : "black");
                         promoteField = field;
                         promotionTiles.SetActive(true);
                         promotionPanel.SetActive(true);
@@ -505,12 +605,17 @@ public class Chess : MonoBehaviour {
             Debug.Log($"On marker choosen empty at {field.Position.ToString()}");
         }
 
+        if (isIaFindingMove)
+            return;
+
         //Check if enemy king field is check
         Field kingField = GetKingField(!isWhiteAtTurn);
         if (WouldBeCheck(kingField.Piece.IsWhite))
         {
-            kingField.Marker = new Marker(MarkerType.CHECK);
-            highlightingManager.ShowOption(kingField);
+            kingField.Marker = currentMarkerFromPool;
+            kingField.Marker.Type = MarkerType.CHECK;
+            if (isIaFindingMove == false)
+                highlightingManager.ShowOption(kingField);
 
             if (!CanMakeAnyLegalMove(!isWhiteAtTurn) && !isIaFindingMove)
             {
@@ -550,38 +655,38 @@ public class Chess : MonoBehaviour {
 
                 if (y == 1)
                 {
-                    fieldW.Piece = new Pawn(fieldW.Position, true);
-                    fieldB.Piece = new Pawn(fieldB.Position, false);
+                    fieldW.Piece = Piece.Create(fieldW.Position, true, PieceType.P);
+                    fieldB.Piece = Piece.Create(fieldB.Position, false, PieceType.P);
                 }
 
                 else if (x == 0 || x == 7)
                 {
-                    fieldW.Piece = new Rook(fieldW.Position, true);
-                    fieldB.Piece = new Rook(fieldB.Position, false);
+                    fieldW.Piece = Piece.Create(fieldW.Position, true, PieceType.R);
+                    fieldB.Piece = Piece.Create(fieldB.Position, false, PieceType.R);
                 }
 
                 else if (x == 1 || x == 6)
                 {
-                    fieldW.Piece = new Knight(fieldW.Position, true);
-                    fieldB.Piece = new Knight(fieldB.Position, false);
+                    fieldW.Piece = Piece.Create(fieldW.Position, true, PieceType.N);
+                    fieldB.Piece = Piece.Create(fieldB.Position, false, PieceType.N);
                 }
 
                 else if (x == 2 || x == 5)
                 {
-                    fieldW.Piece = new Bishop(fieldW.Position, true);
-                    fieldB.Piece = new Bishop(fieldB.Position, false);
+                    fieldW.Piece = Piece.Create(fieldW.Position, true, PieceType.B);
+                    fieldB.Piece = Piece.Create(fieldB.Position, false, PieceType.B);
                 }
 
                 else if (x == 3)
                 {
-                    fieldW.Piece = new Queen(fieldW.Position, true);
-                    fieldB.Piece = new Queen(fieldB.Position, false);
+                    fieldW.Piece = Piece.Create(fieldW.Position, true, PieceType.Q);
+                    fieldB.Piece = Piece.Create(fieldB.Position, false, PieceType.Q);
                 }
 
                 else if (x == 4)
                 {
-                    fieldW.Piece = new King(fieldW.Position, true);
-                    fieldB.Piece = new King(fieldB.Position, false);
+                    fieldW.Piece = Piece.Create(fieldW.Position, true, PieceType.K);
+                    fieldB.Piece = Piece.Create(fieldB.Position, false, PieceType.K);
                 }
 
                 CreatePiece(fieldW);
@@ -595,14 +700,15 @@ public class Chess : MonoBehaviour {
         pieceModelManager.ShowPieceModel(field);
     }
 
-    private void MovePiece(Field now, Field after)
+    private void MovePiece(Field now, Field after, bool iaFindingIsWay = false)
     {
         after.Piece = now.Piece;
-        pieceModelManager.ShowPieceModel(after);
-        pieceModelManager.ShowNoPieceModel(now);
+        if (iaFindingIsWay)
+        {
+            pieceModelManager.ShowPieceModel(after);
+            pieceModelManager.ShowNoPieceModel(now);
+        }
         now.Piece = null;
-
-        Turn++;
     }
 
     private void Castle(Field king, Field rook)
@@ -743,19 +849,19 @@ public class Chess : MonoBehaviour {
         switch (type)
         {
             case 1:
-                promoteField.Piece = new Queen(promoteField.Position, !isWhiteAtTurn);
+                promoteField.Piece = Piece.Create(promoteField.Position, !isWhiteAtTurn, PieceType.Q);
                 break;
 
             case 2:
-                promoteField.Piece = new Knight(promoteField.Position, !isWhiteAtTurn);
+                promoteField.Piece = Piece.Create(promoteField.Position, !isWhiteAtTurn, PieceType.N);
                 break;
 
             case 3:
-                promoteField.Piece = new Rook(promoteField.Position, !isWhiteAtTurn);
+                promoteField.Piece = Piece.Create(promoteField.Position, !isWhiteAtTurn, PieceType.R);
                 break;
 
             case 4:
-                promoteField.Piece = new Bishop(promoteField.Position, !isWhiteAtTurn);
+                promoteField.Piece = Piece.Create(promoteField.Position, !isWhiteAtTurn, PieceType.B);
                 break;
         }
 
