@@ -802,7 +802,7 @@ public class Chess : MonoBehaviour {
 
     public void Quit()
     {
-        SceneManager.LoadScene(0);
+        SceneManager.LoadScene(2);
     }
 
     public void Surrender()
@@ -813,7 +813,7 @@ public class Chess : MonoBehaviour {
 
     public void Revance()
     {
-        SceneManager.LoadScene(1);
+        SceneManager.LoadScene(7);
     }
 
     private void ShowEndScreen(bool draw, bool hasWhiteWon)
