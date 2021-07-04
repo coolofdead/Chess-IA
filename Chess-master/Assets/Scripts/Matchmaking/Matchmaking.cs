@@ -16,6 +16,9 @@ public class Matchmaking : MonoBehaviour
     GameOnline gameOnline;
 
     public static string gameUid;
+    public static string player1;
+    public static string player2;
+
 
 
     FirebaseFirestore db = FirebaseFirestore.DefaultInstance;
@@ -60,16 +63,18 @@ public class Matchmaking : MonoBehaviour
         {
             foreach(DocumentSnapshot documentSnapshot in gamesSolos.Documents)
             {
-                Dictionary<string, object> gameSolo = documentSnapshot.ToDictionary();
+                Dictionary<string, object> getGame = documentSnapshot.ToDictionary();
 
-                foreach (KeyValuePair<string, object> pair in gameSolo)
+                foreach (KeyValuePair<string, object> pair in getGame)
                 {
                     Debug.Log( "I'm here normalement justin " + pair.Key + " " + pair.Value);
                     // On rejoins la partie
-                    gameUid = gameSolo["uid"].ToString();
+                    gameUid = getGame["uid"].ToString();
 
                     DocumentReference gameSoloRef = db.Collection("games").Document(gameUid);
                     await gameSoloRef.UpdateAsync("playerUid2", auth.CurrentUser.UserId);
+                    player1 = getGame["playerUid1"].ToString();
+                    player2 = getGame["playerUid2"].ToString();
 
 
                     // on charge la scene du jeu tout en envoyant les données de l'id et des joueurs?
@@ -116,6 +121,9 @@ public class Matchmaking : MonoBehaviour
                 if(getGame["playerUid2"].ToString() != "")
                 {
                     Debug.Log("y a un joueur qui est là !");
+
+                    player1 = getGame["playerUid1"].ToString();
+                    player2 = getGame["playerUid2"].ToString();
                     // lance la scene en conservant aussi l'id de la salle, peut être tout le dictionnaire getGame
                     // on charge la scene du jeu tout en envoyant les données de l'id et des joueurs?
                     SceneManager.LoadScene("OnlineGameScene");
