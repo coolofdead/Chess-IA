@@ -615,6 +615,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   matchmakingButton: {fileID: 185729440}
   multiLocalButton: {fileID: 1342839433}
+  iaButton: {fileID: 842719692}
 --- !u!1 &768703079
 GameObject:
   m_ObjectHideFlags: 0

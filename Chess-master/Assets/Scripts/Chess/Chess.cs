@@ -30,6 +30,7 @@ public class Chess : MonoBehaviour {
     public static int Turn { set; get; }
 
     public Field[,] fields = new Field[8, 8];
+    public bool isVersusIa = false;
     IA ia;
 
     private static List<Marker> markersPool = new List<Marker> {
@@ -138,7 +139,7 @@ public class Chess : MonoBehaviour {
         var baseMemory = GC.GetTotalMemory(false);
         //Debug.Log($"Memory used before collection: {GC.GetTotalMemory(false)}");
 
-        if (ia.playAsWhite)
+        if (ia.playAsWhite && isVersusIa)
         {
             IaMove();
         }
@@ -150,6 +151,9 @@ public class Chess : MonoBehaviour {
 
     private void IaMove()
     {
+        if (!isVersusIa)
+            return;
+
         var iaMove = ia.GetNextMove();
 
         OnPieceChosen(fields[iaMove.piecePosition.x, iaMove.piecePosition.y]);
@@ -605,7 +609,7 @@ public class Chess : MonoBehaviour {
             Debug.Log($"On marker choosen empty at {field.Position.ToString()}");
         }
 
-        if (isIaFindingMove)
+        if (isIaFindingMove && isVersusIa)
             return;
 
         //Check if enemy king field is check
@@ -630,6 +634,9 @@ public class Chess : MonoBehaviour {
             }
         }
 
+        if (!isVersusIa)
+            RefreshChess();
+
         if (field.Marker == null && !isIaFindingMove)
         {
             player1Waiting.enabled = !player1Waiting.enabled;
@@ -639,7 +646,7 @@ public class Chess : MonoBehaviour {
 
             isWhiteAtTurn = !isWhiteAtTurn;
 
-            if (isWhiteAtTurn == ia.playAsWhite && !promotionTiles.activeSelf)
+            if (isWhiteAtTurn == ia.playAsWhite && !promotionTiles.activeSelf && isVersusIa)
                 IaMove();
         }
     }
@@ -872,7 +879,7 @@ public class Chess : MonoBehaviour {
 
         isWhiteAtTurn = !isWhiteAtTurn;
 
-        if (isWhiteAtTurn == ia.playAsWhite)
+        if (isWhiteAtTurn == ia.playAsWhite && isVersusIa)
             IaMove();
     }
 }
